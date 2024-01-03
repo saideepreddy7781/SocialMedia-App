@@ -1,72 +1,78 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:social_media_app/components/life_cycle_event_handler.dart';
-import 'package:social_media_app/landing/landing_page.dart';
-import 'package:social_media_app/screens/mainscreen.dart';
-import 'package:social_media_app/services/user_service.dart';
-import 'package:social_media_app/utils/config.dart';
-import 'package:social_media_app/utils/constants.dart';
-import 'package:social_media_app/utils/providers.dart';
-import 'package:social_media_app/view_models/theme/theme_view_model.dart';
+
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
+import 'flutter_flow/flutter_flow_theme.dart';
+import 'flutter_flow/flutter_flow_util.dart';
+import 'flutter_flow/internationalization.dart';
+import 'flutter_flow/nav/nav.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Config.initFirebase();
-  runApp(MyApp());
+  usePathUrlStrategy();
+
+  await FlutterFlowTheme.initialize();
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  // This widget is the root of your application.
   @override
-  _MyAppState createState() => _MyAppState();
+  State<MyApp> createState() => _MyAppState();
+
+  static _MyAppState of(BuildContext context) =>
+      context.findAncestorStateOfType<_MyAppState>()!;
 }
 
 class _MyAppState extends State<MyApp> {
+  Locale? _locale;
+  ThemeMode _themeMode = FlutterFlowTheme.themeMode;
+
+  late AppStateNotifier _appStateNotifier;
+  late GoRouter _router;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(
-      LifecycleEventHandler(
-        detachedCallBack: () => UserService().setUserStatus(false),
-        resumeCallBack: () => UserService().setUserStatus(true),
-      ),
-    );
+
+    _appStateNotifier = AppStateNotifier.instance;
+    _router = createRouter(_appStateNotifier);
   }
+
+  void setLocale(String language) {
+    setState(() => _locale = createLocale(language));
+  }
+
+  void setThemeMode(ThemeMode mode) => setState(() {
+        _themeMode = mode;
+        FlutterFlowTheme.saveThemeMode(mode);
+      });
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: providers,
-      child: Consumer<ThemeProvider>(
-        builder: (context, ThemeProvider notifier, Widget? child) {
-          return MaterialApp(
-            title: Constants.appName,
-            debugShowCheckedModeBanner: false,
-            theme: themeData(
-              notifier.dark ? Constants.darkTheme : Constants.lightTheme,
-            ),
-            home: StreamBuilder(
-              stream: FirebaseAuth.instance.authStateChanges(),
-              builder: ((BuildContext context, snapshot) {
-                if (snapshot.hasData) {
-                  return TabScreen();
-                } else
-                  return Landing();
-              }),
-            ),
-          );
-        },
+    return MaterialApp.router(
+      title: 'NBL V1',
+      localizationsDelegates: const [
+        FFLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      locale: _locale,
+      supportedLocales: const [Locale('en', '')],
+      theme: ThemeData(
+        brightness: Brightness.light,
+        scrollbarTheme: const ScrollbarThemeData(),
       ),
-    );
-  }
-
-  ThemeData themeData(ThemeData theme) {
-    return theme.copyWith(
-      textTheme: GoogleFonts.nunitoTextTheme(
-        theme.textTheme,
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        scrollbarTheme: const ScrollbarThemeData(),
       ),
+      themeMode: _themeMode,
+      routerConfig: _router,
     );
   }
 }
-
